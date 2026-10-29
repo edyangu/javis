@@ -6,6 +6,7 @@ import { generateTicketCode } from "./codegen.js";
 import { DEFAULTS } from "./config.js";
 
 const params = new URLSearchParams(window.location.search);
+const eventId = params.get("event");
 const type = params.get("type") === "vip" ? "vip" : "ordinary";
 
 let cfg = null;
@@ -13,10 +14,17 @@ let amount = 0;
 let currentTicket = null;
 
 function fmt(n) { return Number(n).toLocaleString("en-UG"); }
-
 function showErr(msg) {
   const el = document.getElementById("checkout-error");
   if (el) el.textContent = msg;
+}
+
+if (!eventId) {
+  const cv = document.getElementById("checkout-view");
+  if (cv) cv.innerHTML =
+    "<div class='card'><h2>Invalid link</h2>" +
+    "<p>No event selected. Go back to the home page and pick an event.</p>" +
+    "<a class='btn' href='index.html'>Back to Home</a></div>";
 }
 
 function updateInstruction() {
@@ -31,12 +39,15 @@ function updateInstruction() {
 }
 
 async function loadConfig() {
+  if (!eventId) return;
   let loaded = DEFAULTS;
   try {
-    const snap = await getDoc(doc(db, "settings", "event"));
+    const snap = await getDoc(doc(db, "events", eventId));
     if (snap.exists()) {
       const data = snap.data();
       loaded = { ...DEFAULTS, ...data, prices: { ...DEFAULTS.prices, ...(data.prices || {}) } };
+    } else {
+      showErr("This event could not be found. It may have been removed.");
     }
   } catch (e) {
     console.error("loadConfig failed:", e);
@@ -62,6 +73,7 @@ async function handlePay() {
 
   showErr("");
 
+  if (!eventId) { showErr("No event selected."); return; }
   if (!cfg) { showErr("Event not loaded. Refresh the page."); return; }
   if (name.length < 3) { showErr("Enter your full name."); return; }
   if (!/^0[0-9]{9}$/.test(phone)) {
@@ -74,6 +86,7 @@ async function handlePay() {
   const code = generateTicketCode();
   currentTicket = {
     code, type, amount, name, phone, method,
+    eventId: eventId,
     event: cfg.eventName,
     location: cfg.location,
     entryTime: cfg.entryTime,
@@ -90,7 +103,6 @@ async function handlePay() {
     showErr("Ticket generated, but Firestore save failed: " + e.message);
   }
 
-  // Switch to success view and display ticket details
   const cv = document.getElementById("checkout-view");
   const sv = document.getElementById("success-view");
   if (cv) cv.style.display = "none";
@@ -104,7 +116,6 @@ async function handlePay() {
     type.toUpperCase() + " | " + cfg.eventName + " | " +
     cfg.location + " | Entry " + cfg.entryTime;
 
-  // Generate QR code for this ticket
   const qrContainer = document.getElementById("ticket-qr");
   if (qrContainer) {
     qrContainer.innerHTML = "";
@@ -149,10 +160,8 @@ function handleDownload() {
   URL.revokeObjectURL(url);
 }
 
-// Wire up immediately - module scripts run after DOM is parsed
 const payBtn = document.getElementById("pay-now-btn");
 if (payBtn) payBtn.addEventListener("click", handlePay);
-else showErr("Pay button not found in HTML.");
 
 const dlBtn = document.getElementById("download-btn");
 if (dlBtn) dlBtn.addEventListener("click", handleDownload);
