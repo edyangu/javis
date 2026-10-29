@@ -20,6 +20,11 @@ function showErr(msg) {
   if (el) el.textContent = msg;
 }
 
+function view(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = show ? "block" : "none";
+}
+
 if (!eventId) {
   const cv = document.getElementById("checkout-view");
   if (cv) cv.innerHTML =
@@ -30,20 +35,14 @@ if (!eventId) {
 
 function updateInstruction() {
   if (!cfg) return;
-
   const m = document.getElementById("payment-method").value;
   const number = m === "mtn" ? cfg.mtnNumber : cfg.airtelNumber;
   const label = m === "mtn" ? "MTN Mobile Money" : "Airtel Money";
-
-  const info = document.getElementById("payment-info");
-  const payAmount = document.getElementById("pay-amount");
-  const payNumber = document.getElementById("pay-number");
-  const payNetwork = document.getElementById("pay-network");
-
-  if (info) info.style.display = "block";
-  if (payAmount) payAmount.textContent = cfg.currency + " " + fmt(amount);
-  if (payNumber) payNumber.textContent = number || "(not set)";
-  if (payNetwork) payNetwork.textContent = label;
+  const el = document.getElementById("payment-instruction");
+  if (el) el.textContent =
+    "When you click Pay Now, you will receive a " + label +
+    " prompt on your phone to approve " + cfg.currency + " " + fmt(amount) +
+    ". Enter your PIN to complete the payment.";
 }
 
 async function loadConfig() {
@@ -73,6 +72,28 @@ async function loadConfig() {
   updateInstruction();
 }
 
+async function callPaymentApi(phone, method) {
+  const resp = await fetch("/api/pay", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      phone, amount, method, eventId, type
+    })
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || "Payment request failed");
+  }
+
+  return resp.json();
+}
+
+function progressBarTo(percent) {
+  const bar = document.getElementById("waiting-bar");
+  if (bar) bar.style.width = percent + "%";
+}
+
 async function handlePay() {
   const btn = document.getElementById("pay-now-btn");
   const name = document.getElementById("buyer-name").value.trim();
@@ -89,56 +110,99 @@ async function handlePay() {
     return;
   }
 
-  if (btn) { btn.disabled = true; btn.textContent = "Generating code..."; }
+  // Switch to waiting view
+  view("checkout-view", false);
+  view("waiting-view", true);
 
-  const code = generateTicketCode();
-  currentTicket = {
-    code, type, amount, name, phone, method,
-    eventId: eventId,
-    event: cfg.eventName,
-    location: cfg.location,
-    entryTime: cfg.entryTime,
-    status: "valid"
-  };
+  const networkLabel = method === "mtn" ? "MTN" : "Airtel";
+  document.getElementById("waiting-network").textContent = networkLabel;
+  document.getElementById("waiting-amount").textContent = cfg.currency + " " + fmt(amount);
+  document.getElementById("waiting-phone").textContent = "Sending to phone: " + phone;
+
+  const status = document.getElementById("waiting-status");
+
+  // Progress bar animation while waiting
+  progressBarTo(0);
+  let progress = 0;
+  const tick = setInterval(() => {
+    progress = Math.min(progress + 2, 95);
+    progressBarTo(progress);
+  }, 100);
+
+  setTimeout(() => {
+    if (status) status.textContent = "Prompt sent. Check your phone...";
+  }, 800);
+
+  setTimeout(() => {
+    if (status) status.textContent = "Waiting for you to enter your PIN...";
+  }, 2200);
 
   try {
-    await addDoc(collection(db, "tickets"), {
-      ...currentTicket,
-      issuedAt: serverTimestamp()
-    });
-  } catch (e) {
-    console.error("Save failed:", e);
-    showErr("Ticket generated, but Firestore save failed: " + e.message);
-  }
+    const result = await callPaymentApi(phone, method);
 
-  const cv = document.getElementById("checkout-view");
-  const sv = document.getElementById("success-view");
-  if (cv) cv.style.display = "none";
-  if (sv) sv.style.display = "block";
+    clearInterval(tick);
+    progressBarTo(100);
 
-  const codeEl = document.getElementById("ticket-code");
-  if (codeEl) codeEl.textContent = code;
+    if (!result.success) {
+      throw new Error("Payment was not approved.");
+    }
 
-  const metaEl = document.getElementById("ticket-meta");
-  if (metaEl) metaEl.textContent =
-    type.toUpperCase() + " | " + cfg.eventName + " | " +
-    cfg.location + " | Entry " + cfg.entryTime;
+    if (status) status.textContent = "Payment received. Generating your ticket...";
 
-  const qrContainer = document.getElementById("ticket-qr");
-  if (qrContainer) {
-    qrContainer.innerHTML = "";
+    // Now generate the ticket code and save to Firestore
+    const code = generateTicketCode();
+    currentTicket = {
+      code, type, amount, name, phone, method,
+      eventId: eventId,
+      event: cfg.eventName,
+      location: cfg.location,
+      entryTime: cfg.entryTime,
+      status: "valid",
+      paymentReference: result.reference || null,
+      paymentSimulated: result.simulated === true
+    };
+
     try {
-      new QRCode(qrContainer, {
-        text: code,
-        width: 180,
-        height: 180,
-        colorDark: "#1a1a1a",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+      await addDoc(collection(db, "tickets"), {
+        ...currentTicket,
+        issuedAt: serverTimestamp()
       });
     } catch (e) {
-      console.error("QR generation failed:", e);
+      console.error("Save failed:", e);
     }
+
+    // Switch to success view
+    view("waiting-view", false);
+    view("success-view", true);
+
+    document.getElementById("ticket-code").textContent = code;
+    document.getElementById("ticket-meta").textContent =
+      type.toUpperCase() + " | " + cfg.eventName + " | " +
+      cfg.location + " | Entry " + cfg.entryTime;
+
+    const qrContainer = document.getElementById("ticket-qr");
+    if (qrContainer) {
+      qrContainer.innerHTML = "";
+      try {
+        new QRCode(qrContainer, {
+          text: code,
+          width: 180,
+          height: 180,
+          colorDark: "#1a1a1a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch (e) {
+        console.error("QR generation failed:", e);
+      }
+    }
+  } catch (e) {
+    clearInterval(tick);
+    console.error("Payment failed:", e);
+    view("waiting-view", false);
+    view("checkout-view", true);
+    if (btn) { btn.disabled = false; btn.textContent = "Pay Now"; }
+    showErr("Payment failed: " + e.message);
   }
 }
 
@@ -176,22 +240,5 @@ if (dlBtn) dlBtn.addEventListener("click", handleDownload);
 
 const methodSel = document.getElementById("payment-method");
 if (methodSel) methodSel.addEventListener("change", updateInstruction);
-
-const copyBtn = document.getElementById("copy-number-btn");
-if (copyBtn) {
-  copyBtn.addEventListener("click", async () => {
-    const m = document.getElementById("payment-method").value;
-    const number = m === "mtn" ? cfg?.mtnNumber : cfg?.airtelNumber;
-    if (!number) return;
-    try {
-      await navigator.clipboard.writeText(number);
-      copyBtn.textContent = "Copied";
-      setTimeout(() => { copyBtn.textContent = "Copy number"; }, 1500);
-    } catch (e) {
-      copyBtn.textContent = "Copy failed";
-      setTimeout(() => { copyBtn.textContent = "Copy number"; }, 1500);
-    }
-  });
-}
 
 loadConfig();
