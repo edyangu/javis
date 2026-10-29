@@ -19,38 +19,13 @@
 
 <main>
 
-  <div class="card event-info">
-    <h2 id="event-name">Loading...</h2>
-    <p><strong>Location:</strong> <span id="event-location">-</span></p>
-    <p><strong>Entry Time:</strong> <span id="event-time">-</span></p>
-    <p><strong>Organised by:</strong> <span id="event-org">-</span></p>
+  <div class="card">
+    <h2>Upcoming Events</h2>
+    <p class="muted">Choose an event below to buy tickets.</p>
   </div>
 
-  <div class="card">
-    <h2>Choose Your Ticket</h2>
-    <div class="ticket-options">
-
-      <div class="ticket-box">
-        <h3>Ordinary</h3>
-        <div class="price" id="price-ordinary">UGX 0</div>
-        <p class="desc">Standard entry to the concert. Access to general standing area.</p>
-        <button onclick="selectTicket('ordinary')">Select Ordinary</button>
-      </div>
-
-      <div class="ticket-box">
-        <h3>VIP</h3>
-        <div class="price" id="price-vip">UGX 0</div>
-        <p class="desc">Priority entry, front stage access, and reserved seating.</p>
-        <button onclick="selectTicket('vip')">Select VIP</button>
-      </div>
-
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Organiser Access</h2>
-    <p class="muted">Manage your event, prices, and tickets.</p>
-    <a class="btn" href="login.html">Organiser Login / Register</a>
+  <div id="events-list">
+    <p class="muted">Loading events...</p>
   </div>
 
   <p class="muted">
@@ -60,9 +35,7 @@
 
 </main>
 
-<footer>
-  Javis Ticketing Demo &mdash; all prices in UGX
-</footer>
+<footer>Javis Ticketing Demo &mdash; all prices in UGX</footer>
 
 <script type="module" src="js/tickets.js"></script>
 </body>
