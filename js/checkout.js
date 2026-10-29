@@ -14,6 +14,7 @@ let amount = 0;
 let currentTicket = null;
 
 function fmt(n) { return Number(n).toLocaleString("en-UG"); }
+
 function showErr(msg) {
   const el = document.getElementById("checkout-error");
   if (el) el.textContent = msg;
@@ -29,13 +30,20 @@ if (!eventId) {
 
 function updateInstruction() {
   if (!cfg) return;
+
   const m = document.getElementById("payment-method").value;
   const number = m === "mtn" ? cfg.mtnNumber : cfg.airtelNumber;
   const label = m === "mtn" ? "MTN Mobile Money" : "Airtel Money";
-  const el = document.getElementById("payment-instruction");
-  if (el) el.textContent =
-    "Send " + cfg.currency + " " + fmt(amount) + " to " + label +
-    " number " + number + ". In this demo, no real money is charged.";
+
+  const info = document.getElementById("payment-info");
+  const payAmount = document.getElementById("pay-amount");
+  const payNumber = document.getElementById("pay-number");
+  const payNetwork = document.getElementById("pay-network");
+
+  if (info) info.style.display = "block";
+  if (payAmount) payAmount.textContent = cfg.currency + " " + fmt(amount);
+  if (payNumber) payNumber.textContent = number || "(not set)";
+  if (payNetwork) payNetwork.textContent = label;
 }
 
 async function loadConfig() {
@@ -168,5 +176,22 @@ if (dlBtn) dlBtn.addEventListener("click", handleDownload);
 
 const methodSel = document.getElementById("payment-method");
 if (methodSel) methodSel.addEventListener("change", updateInstruction);
+
+const copyBtn = document.getElementById("copy-number-btn");
+if (copyBtn) {
+  copyBtn.addEventListener("click", async () => {
+    const m = document.getElementById("payment-method").value;
+    const number = m === "mtn" ? cfg?.mtnNumber : cfg?.airtelNumber;
+    if (!number) return;
+    try {
+      await navigator.clipboard.writeText(number);
+      copyBtn.textContent = "Copied";
+      setTimeout(() => { copyBtn.textContent = "Copy number"; }, 1500);
+    } catch (e) {
+      copyBtn.textContent = "Copy failed";
+      setTimeout(() => { copyBtn.textContent = "Copy number"; }, 1500);
+    }
+  });
+}
 
 loadConfig();
