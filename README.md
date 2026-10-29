@@ -84,4 +84,7 @@ Search and filter on the ticket lists, particularly by phone number.
 A delete event button so organisers can remove an event they no longer
 want listed on the homepage.
 
+Ticket count stored on the event document instead of queried per page
+load, to keep the homepage fast when there are many events.
+
 A proper landing page hero for the homepage with a larger call to action.
