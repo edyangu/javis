@@ -1,27 +1,62 @@
 import { db } from "./firebase.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { DEFAULTS } from "./config.js";
+import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-(async function () {
-  let c = DEFAULTS;
+const listEl = document.getElementById("events-list");
+
+async function loadAllEvents() {
   try {
-    const snap = await getDoc(doc(db, "settings", "event"));
-    if (snap.exists()) {
-      const data = snap.data();
-      c = { ...DEFAULTS, ...data, prices: { ...DEFAULTS.prices, ...(data.prices || {}) } };
+    const q = query(collection(db, "events"), where("active", "==", true));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      listEl.innerHTML = '<p class="muted">No events available right now. Check back soon.</p>';
+      return;
     }
-  } catch (e) { console.error("Could not load event config:", e); }
 
-  document.getElementById("event-name").textContent     = c.eventName;
-  document.getElementById("event-location").textContent = c.location;
-  document.getElementById("event-time").textContent     = c.entryTime;
-  document.getElementById("event-org").textContent      = c.orgName;
+    const fmt = n => Number(n).toLocaleString("en-UG");
+    listEl.innerHTML = "";
 
-  const fmt = n => Number(n).toLocaleString("en-UG");
-  document.getElementById("price-ordinary").textContent = c.currency + " " + fmt(c.prices.ordinary);
-  document.getElementById("price-vip").textContent      = c.currency + " " + fmt(c.prices.vip);
+    snap.forEach(d => {
+      const e = d.data();
+      const card = document.createElement("div");
+      card.className = "card";
 
-  window.selectTicket = function (type) {
-    window.location.href = "checkout.html?type=" + encodeURIComponent(type);
-  };
-})();
+      const priceOrd = (e.currency || "UGX") + " " + fmt(e.prices?.ordinary ?? 0);
+      const priceVip = (e.currency || "UGX") + " " + fmt(e.prices?.vip ?? 0);
+
+      card.innerHTML =
+        '<h2>' + (e.eventName || 'Event') + '</h2>' +
+        '<p class="muted">' + (e.orgName || '') + '</p>' +
+        '<p><strong>Location:</strong> ' + (e.location || '-') + '</p>' +
+        '<p><strong>Entry Time:</strong> ' + (e.entryTime || '-') + '</p>' +
+        '<div class="row" style="margin-top:16px;">' +
+          '<div class="ticket-box">' +
+            '<h3>Ordinary</h3>' +
+            '<div class="price">' + priceOrd + '</div>' +
+            '<button data-event="' + d.id + '" data-type="ordinary">Buy Ordinary</button>' +
+          '</div>' +
+          '<div class="ticket-box">' +
+            '<h3>VIP</h3>' +
+            '<div class="price">' + priceVip + '</div>' +
+            '<button data-event="' + d.id + '" data-type="vip">Buy VIP</button>' +
+          '</div>' +
+        '</div>';
+
+      card.querySelectorAll('button[data-event]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const eventId = btn.getAttribute('data-event');
+          const type = btn.getAttribute('data-type');
+          window.location.href = 'checkout.html?event=' +
+            encodeURIComponent(eventId) + '&type=' + encodeURIComponent(type);
+        });
+      });
+
+      listEl.appendChild(card);
+    });
+  } catch (e) {
+    console.error("loadAllEvents error:", e);
+    listEl.innerHTML = '<p class="error">Could not load events. ' + e.message + '</p>';
+  }
+}
+
+loadAllEvents();
