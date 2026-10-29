@@ -29,13 +29,19 @@ in the project folder and open http://localhost:8000. Firebase requires
 localhost to be listed under Authorized domains, and it is by default, so
 this works out of the box.
 
+The /api/pay serverless function is a Vercel feature. To test it locally
+you need the Vercel CLI: install it with npm install -g vercel, then run
+vercel dev instead of python -m http.server. Without vercel dev, the
+payment call will fail locally and the checkout will show a "Payment
+failed" error. The rest of the site works fine with any static server.
+
 ## Deploying
 
 The site is deployed to Vercel. Any commit to the main branch of the
-GitHub repo triggers an automatic redeploy. No build step is used because
-Vercel serves the files directly. After deploying to a new domain,
-remember to add that domain to Firebase Authentication, Settings,
-Authorized domains.
+GitHub repo triggers an automatic redeploy. Vercel detects api/pay.js as
+a serverless function and exposes it at /api/pay. No build step is used
+for the static files. After deploying to a new domain, remember to add
+that domain to Firebase Authentication, Settings, Authorized domains.
 
 ## Ticket code format
 
@@ -52,10 +58,30 @@ reject forged or mistyped codes without a database lookup.
 
 Not yet built, listed roughly in order of priority.
 
-Real MTN and Airtel payment integration with merchant credentials and
-webhook confirmation. SMS or email delivery of ticket codes after
-purchase. A mark as used flow so each ticket can only be verified once at
-the door. In app super admin management to promote or demote users
-without touching the Firebase Console. Search and filter on the ticket
-lists. A delete event button so organisers can remove an event they no
-longer want listed. A proper landing page hero for the homepage.
+Real MTN and Airtel payment integration. Replace the body of api/pay.js
+with a real call to the MTN MoMo Collections API or the Airtel Money API.
+The checkout, waiting view, ticket generation, and dashboard stay
+unchanged. Only the serverless function needs updating once merchant
+credentials are available.
+
+Payment webhook. Add a second endpoint, for example api/webhook.js, that
+receives notifications from MTN or Airtel when a payment succeeds. Store
+the confirmed payment reference against the ticket so organisers can
+reconcile sales against their mobile money statement.
+
+SMS or email delivery of ticket codes after purchase. Requires an SMS
+gateway or email service, plus a backend function to trigger the send.
+
+A mark as used flow so each ticket can only be verified once at the door.
+Add a Mark Used button on each ticket row in the dashboard, and update the
+verify logic to reject used tickets.
+
+In app super admin management to promote or demote users without touching
+the Firebase Console.
+
+Search and filter on the ticket lists, particularly by phone number.
+
+A delete event button so organisers can remove an event they no longer
+want listed on the homepage.
+
+A proper landing page hero for the homepage with a larger call to action.
