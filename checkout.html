@@ -41,7 +41,14 @@
         <option value="airtel">Airtel Money</option>
       </select>
 
-      <p class="muted" id="payment-instruction"></p>
+      <div id="payment-info" class="notice" style="margin-top:16px; display:none;">
+        <strong>Step 1:</strong> Send <span id="pay-amount">-</span> to
+        <span id="pay-number" style="font-family:monospace; font-weight:bold;">-</span>
+        using <span id="pay-network">-</span>.
+        <button type="button" id="copy-number-btn" class="secondary" style="margin-left:8px; padding:4px 10px; font-size:12px;">Copy number</button>
+        <br>
+        <strong>Step 2:</strong> Fill in your name and phone below, then click Pay Now to receive your ticket code.
+      </div>
 
       <p id="checkout-error" class="error"></p>
 
