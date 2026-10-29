@@ -2,33 +2,28 @@ import { auth, db } from "./firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   doc, getDoc, setDoc, deleteDoc,
-  collection, getDocs, query, orderBy
+  collection, getDocs, query, where, orderBy
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { verifyTicketCode } from "./codegen.js";
 import { DEFAULTS } from "./config.js";
 
-const EVENT_REF = () => doc(db, "settings", "event");
-const ADMIN_REF = (uid) => doc(db, "admins", uid);
-
 let currentUser = null;
 let isSuperAdmin = false;
+let myEventId = null;
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     document.getElementById("access-denied").style.display = "block";
     document.getElementById("dashboard-body").style.display = "none";
-    document.getElementById("super-admin-panel").style.display = "none";
     return;
   }
   currentUser = user;
+  myEventId = user.uid;
 
-  // Check if this user is a super admin
   try {
-    const adminSnap = await getDoc(ADMIN_REF(user.uid));
+    const adminSnap = await getDoc(doc(db, "admins", user.uid));
     isSuperAdmin = adminSnap.exists();
-  } catch (e) {
-    isSuperAdmin = false;
-  }
+  } catch (e) { isSuperAdmin = false; }
 
   document.getElementById("access-denied").style.display = "none";
   document.getElementById("dashboard-body").style.display = "block";
@@ -50,7 +45,7 @@ onAuthStateChanged(auth, async (user) => {
 
 async function loadConfigIntoForm() {
   try {
-    const snap = await getDoc(EVENT_REF());
+    const snap = await getDoc(doc(db, "events", myEventId));
     const c = snap.exists() ? snap.data() : DEFAULTS;
     document.getElementById("cfg-org").value        = c.orgName || "";
     document.getElementById("cfg-event").value      = c.eventName || "";
@@ -67,6 +62,7 @@ async function loadConfigIntoForm() {
 
 window.saveSettings = async function () {
   const newCfg = {
+    organiserUid: myEventId,
     orgName:    document.getElementById("cfg-org").value.trim() || "Javis Events",
     eventName:  document.getElementById("cfg-event").value.trim() || "Concert",
     location:   document.getElementById("cfg-location").value.trim() || "Kampala",
@@ -77,11 +73,12 @@ window.saveSettings = async function () {
       vip:      Number(document.getElementById("cfg-price-vip").value) || 0
     },
     mtnNumber:    document.getElementById("cfg-mtn").value.trim(),
-    airtelNumber: document.getElementById("cfg-airtel").value.trim()
+    airtelNumber: document.getElementById("cfg-airtel").value.trim(),
+    active: true
   };
 
   try {
-    await setDoc(EVENT_REF(), newCfg, { merge: true });
+    await setDoc(doc(db, "events", myEventId), newCfg, { merge: true });
     document.getElementById("save-status").textContent =
       "Settings saved at " + new Date().toLocaleTimeString();
   } catch (e) {
@@ -94,11 +91,20 @@ async function renderTickets() {
   if (!tbody) return;
   tbody.innerHTML = "";
   try {
-    const q = query(collection(db, "tickets"), orderBy("issuedAt", "desc"));
+    const q = query(
+      collection(db, "tickets"),
+      where("eventId", "==", myEventId)
+    );
     const snap = await getDocs(q);
     document.getElementById("sold-count").textContent = snap.size + " ticket(s) sold";
-    snap.forEach(d => {
-      const t = d.data();
+    const rows = [];
+    snap.forEach(d => rows.push(d.data()));
+    rows.sort((a, b) => {
+      const ta = a.issuedAt?.toMillis?.() || 0;
+      const tb = b.issuedAt?.toMillis?.() || 0;
+      return tb - ta;
+    });
+    rows.forEach(t => {
       const tr = document.createElement("tr");
       const issued = t.issuedAt && t.issuedAt.toMillis
         ? new Date(t.issuedAt.toMillis()).toLocaleString() : "-";
@@ -117,12 +123,12 @@ async function renderTickets() {
 }
 
 window.clearTickets = async function () {
-  if (!confirm("Delete ALL tickets?")) return;
+  if (!confirm("Delete all tickets for your event?")) return;
   try {
-    const snap = await getDocs(collection(db, "tickets"));
+    const q = query(collection(db, "tickets"), where("eventId", "==", myEventId));
+    const snap = await getDocs(q);
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
     await renderTickets();
-    if (isSuperAdmin) await loadAllTickets();
   } catch (e) { alert("Clear failed: " + e.message); }
 };
 
@@ -132,50 +138,43 @@ window.verifyCode = async function () {
   result.textContent = "";
   if (!verifyTicketCode(code)) { result.textContent = "INVALID format or checksum."; return; }
   try {
-    const snap = await getDocs(collection(db, "tickets"));
-    let found = null;
-    snap.forEach(d => { if (d.data().code === code) found = d.data(); });
-    if (!found) { result.textContent = "Well-formed but not found."; return; }
-    result.textContent = "VALID - " + found.type.toUpperCase() + " for " + found.name + " (" + found.phone + ")";
+    const q = query(collection(db, "tickets"), where("code", "==", code));
+    const snap = await getDocs(q);
+    if (snap.empty) { result.textContent = "Well-formed but not found."; return; }
+    const t = snap.docs[0].data();
+    if (t.eventId !== myEventId && !isSuperAdmin) {
+      result.textContent = "This ticket belongs to another organiser's event.";
+      return;
+    }
+    result.textContent = "VALID - " + t.type.toUpperCase() + " for " + t.name + " (" + t.phone + ")";
   } catch (e) { result.textContent = "Verify failed: " + e.message; }
 };
-
-/* ============================================
-   SUPER ADMIN specific functions
-   ============================================ */
 
 async function loadOrganisers() {
   const tbody = document.getElementById("organisers-table-body");
   if (!tbody) return;
   tbody.innerHTML = "";
-
   try {
-    // Every user who has logged in is in Firestore as an "organiser"
-    // We use the organisers collection, which auth.js will write on login
     const snap = await getDocs(collection(db, "organisers"));
     document.getElementById("organisers-count").textContent = snap.size + " organiser(s)";
-
     if (snap.size === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="muted">No organisers registered yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="muted">No organisers yet.</td></tr>';
       return;
     }
-
     snap.forEach(d => {
       const o = d.data();
       const tr = document.createElement("tr");
-      [d.id, o.email || "-", o.name || "-", o.createdAt ? new Date(o.createdAt.toMillis ? o.createdAt.toMillis() : o.createdAt).toLocaleString() : "-"]
-        .forEach(val => {
-          const td = document.createElement("td");
-          td.textContent = val ?? "";
-          td.style.fontFamily = d.id === val ? "monospace" : "inherit";
-          td.style.fontSize = d.id === val ? "12px" : "13px";
-          tr.appendChild(td);
-        });
+      const joined = o.createdAt && o.createdAt.toMillis
+        ? new Date(o.createdAt.toMillis()).toLocaleString() : "-";
+      [d.id, o.email || "-", o.name || "-", joined].forEach(val => {
+        const td = document.createElement("td");
+        td.textContent = val;
+        tr.appendChild(td);
+      });
       tbody.appendChild(tr);
     });
   } catch (e) {
     console.error("loadOrganisers error:", e);
-    tbody.innerHTML = '<tr><td colspan="4" class="error">Could not load organisers: ' + e.message + '</td></tr>';
   }
 }
 
@@ -183,17 +182,14 @@ async function loadAllTickets() {
   const tbody = document.getElementById("all-tickets-table-body");
   if (!tbody) return;
   tbody.innerHTML = "";
-
   try {
     const q = query(collection(db, "tickets"), orderBy("issuedAt", "desc"));
     const snap = await getDocs(q);
     document.getElementById("all-tickets-count").textContent = snap.size + " ticket(s) total";
-
     if (snap.size === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="muted">No tickets sold yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="muted">No tickets yet.</td></tr>';
       return;
     }
-
     snap.forEach(d => {
       const t = d.data();
       const tr = document.createElement("tr");
@@ -202,14 +198,13 @@ async function loadAllTickets() {
       [t.code, t.name, (t.type || "").toUpperCase(), t.amount + " UGX", issued]
         .forEach(val => {
           const td = document.createElement("td");
-          td.textContent = val ?? "";
+          td.textContent = val;
           tr.appendChild(td);
         });
       tbody.appendChild(tr);
     });
   } catch (e) {
     console.error("loadAllTickets error:", e);
-    tbody.innerHTML = '<tr><td colspan="5" class="error">Could not load tickets: ' + e.message + '</td></tr>';
   }
 }
 
