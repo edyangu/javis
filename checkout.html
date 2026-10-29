@@ -41,18 +41,27 @@
         <option value="airtel">Airtel Money</option>
       </select>
 
-      <div id="payment-info" class="notice" style="margin-top:16px; display:none;">
-        <strong>Step 1:</strong> Send <span id="pay-amount">-</span> to
-        <span id="pay-number" style="font-family:monospace; font-weight:bold;">-</span>
-        using <span id="pay-network">-</span>.
-        <button type="button" id="copy-number-btn" class="secondary" style="margin-left:8px; padding:4px 10px; font-size:12px;">Copy number</button>
-        <br>
-        <strong>Step 2:</strong> Fill in your name and phone below, then click Pay Now to receive your ticket code.
-      </div>
+      <p class="muted" id="payment-instruction" style="margin-top:16px;"></p>
 
       <p id="checkout-error" class="error"></p>
 
       <button id="pay-now-btn" type="button">Pay Now</button>
+    </div>
+  </div>
+
+  <div id="waiting-view" style="display:none;">
+    <div class="card">
+      <h2>Waiting for payment</h2>
+      <p>A payment prompt has been sent to your phone.</p>
+      <p>Open your <strong id="waiting-network">MTN</strong> menu and enter your PIN to approve the payment of <strong id="waiting-amount">-</strong>.</p>
+      <p class="muted" id="waiting-phone"></p>
+      <p style="margin-top:24px;">Do not close this page.</p>
+      <div style="margin-top:20px;">
+        <div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
+          <div id="waiting-bar" style="height:100%; width:0%; background:#d4a017; transition:width 0.1s linear;"></div>
+        </div>
+      </div>
+      <p class="muted" id="waiting-status" style="margin-top:16px;">Sending request...</p>
     </div>
   </div>
 
