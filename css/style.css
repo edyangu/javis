@@ -56,7 +56,7 @@ a:hover {
 /* ============ HEADER ============ */
 
 header {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid #e5e7eb;
   padding: 20px 40px;
   display: flex;
@@ -68,7 +68,6 @@ header {
   top: 0;
   z-index: 50;
   backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.95);
 }
 
 header h1 {
@@ -170,6 +169,44 @@ main {
   min-width: 120px;
 }
 
+/* ============ EVENT HEADER + SOLD BADGE ============ */
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+}
+
+.event-header h2 {
+  margin: 0 0 4px 0;
+  padding: 0;
+  border: none;
+  font-size: 22px;
+}
+
+.event-header .muted {
+  margin: 0;
+  font-size: 13px;
+}
+
+.sold-badge {
+  display: inline-block;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid #bbf7d0;
+}
+
 /* ============ TICKET OPTIONS ============ */
 
 .ticket-options {
@@ -185,8 +222,7 @@ main {
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
-  position: relative;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .ticket-box:hover {
@@ -464,7 +500,7 @@ footer {
   letter-spacing: 0.02em;
 }
 
-/* ============ WAITING BAR (progress) ============ */
+/* ============ WAITING PROGRESS BAR ============ */
 
 #waiting-bar {
   transition: width 0.1s linear;
@@ -514,6 +550,15 @@ footer {
 
   .event-info h2 {
     font-size: 22px;
+  }
+
+  .event-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .event-header h2 {
+    font-size: 19px;
   }
 
   .ticket-options {
