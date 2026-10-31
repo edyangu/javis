@@ -10,6 +10,7 @@ import { DEFAULTS } from "./config.js";
 let currentUser = null;
 let isSuperAdmin = false;
 let myEventId = null;
+let myEventActive = true;
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -47,6 +48,8 @@ async function loadConfigIntoForm() {
   try {
     const snap = await getDoc(doc(db, "events", myEventId));
     const c = snap.exists() ? snap.data() : DEFAULTS;
+    myEventActive = c.active !== false;
+
     document.getElementById("cfg-org").value        = c.orgName || "";
     document.getElementById("cfg-event").value      = c.eventName || "";
     document.getElementById("cfg-location").value   = c.location || "";
@@ -55,10 +58,56 @@ async function loadConfigIntoForm() {
     document.getElementById("cfg-price-vip").value      = c.prices?.vip ?? 150000;
     document.getElementById("cfg-mtn").value        = c.mtnNumber || "";
     document.getElementById("cfg-airtel").value     = c.airtelNumber || "";
+
+    updateActiveUI();
   } catch (e) {
     console.error("loadConfig error:", e);
   }
 }
+
+function updateActiveUI() {
+  const btn = document.getElementById("toggle-active-btn");
+  const hint = document.getElementById("toggle-hint");
+  const statusLine = document.getElementById("event-status-line");
+
+  if (!btn) return;
+  btn.style.display = "inline-flex";
+  if (hint) hint.style.display = "block";
+
+  if (myEventActive) {
+    btn.textContent = "Hide Event";
+    btn.classList.remove("danger");
+    btn.classList.add("secondary");
+    if (statusLine) {
+      statusLine.style.display = "block";
+      statusLine.innerHTML = "Status: <strong style='color:#15803d;'>Visible</strong> — your event is on the public homepage.";
+    }
+  } else {
+    btn.textContent = "Show Event";
+    btn.classList.remove("secondary");
+    btn.classList.add("danger");
+    if (statusLine) {
+      statusLine.style.display = "block";
+      statusLine.innerHTML = "Status: <strong style='color:#b91c1c;'>Hidden</strong> — your event is not on the public homepage.";
+    }
+  }
+}
+
+window.toggleActive = async function () {
+  const newValue = !myEventActive;
+  const action = newValue ? "Show" : "Hide";
+  if (!confirm(action + " this event on the homepage?")) return;
+
+  try {
+    await setDoc(doc(db, "events", myEventId), { active: newValue }, { merge: true });
+    myEventActive = newValue;
+    updateActiveUI();
+    document.getElementById("save-status").textContent =
+      "Event " + (newValue ? "shown" : "hidden") + " at " + new Date().toLocaleTimeString();
+  } catch (e) {
+    document.getElementById("save-status").textContent = "Failed to update: " + e.message;
+  }
+};
 
 window.saveSettings = async function () {
   const newCfg = {
@@ -74,7 +123,7 @@ window.saveSettings = async function () {
     },
     mtnNumber:    document.getElementById("cfg-mtn").value.trim(),
     airtelNumber: document.getElementById("cfg-airtel").value.trim(),
-    active: true
+    active: myEventActive
   };
 
   try {
