@@ -201,7 +201,6 @@ function handleDownload() {
   if (!currentTicket) return;
   const t = currentTicket;
 
-  // Build QR as data URL using qrcodejs already on the page
   const qrWrapper = document.createElement("div");
   new QRCode(qrWrapper, {
     text: t.code,
@@ -300,13 +299,13 @@ function handleDownload() {
 
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
-  const w = window.open(url, "_blank");
-  if (!w) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "javis-ticket-" + t.code + ".html";
-    a.click();
-  }
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "javis-ticket-" + t.code + ".html";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 const payBtn = document.getElementById("pay-now-btn");
