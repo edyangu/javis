@@ -34,6 +34,8 @@
         <span id="public-link" style="font-family:monospace; word-break:break-all;"></span>
       </p>
 
+      <p class="muted" id="event-status-line" style="display:none;"></p>
+
       <label for="cfg-org">Organisation Name</label>
       <input id="cfg-org" type="text">
 
@@ -72,7 +74,14 @@
       </div>
 
       <p id="save-status" class="muted"></p>
-      <button onclick="saveSettings()">Save Settings</button>
+
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+        <button onclick="saveSettings()">Save Settings</button>
+        <button id="toggle-active-btn" class="secondary" type="button" onclick="toggleActive()" style="display:none;"></button>
+      </div>
+      <p class="muted" id="toggle-hint" style="display:none; margin-top:8px;">
+        Hiding an event removes it from the public homepage. Tickets already sold remain valid and you can still see them below. You can unhide the event at any time.
+      </p>
     </div>
 
     <div class="card">
