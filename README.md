@@ -6,7 +6,7 @@ events so the homepage can list them. Anyone can create a ticket because
 buyers are not logged in at checkout. Only logged in users can read
 tickets, and the dashboard filters further to show only own tickets.
 
-## Firebase setup checklist
+Firebase setup checklist
 
 Create a Firebase project at console.firebase.google.com. Enable
 Authentication and turn on the Email/Password provider. Create a
@@ -14,7 +14,7 @@ Firestore database in production mode. Add your Vercel domain to
 Authentication, Settings, Authorized domains. Copy the Firebase config
 into js/firebase.js. Publish the Firestore rules described above.
 
-## How to set a super admin
+How to set a super admin
 
 Sign up normally on the site. Go to Firebase Console, Authentication,
 Users, and copy the UID of the account. Go to Firestore, Data, and open
@@ -22,7 +22,7 @@ the admins collection. Create a document whose ID is that UID. Add a
 field called email of type string with the account email. Log out and
 log back in. The SUPER badge appears on the dashboard.
 
-## Running locally
+Running locally
 
 Any static file server works. For example run python -m http.server 8000
 in the project folder and open http://localhost:8000. Firebase requires
@@ -35,7 +35,7 @@ vercel dev instead of python -m http.server. Without vercel dev, the
 payment call will fail locally and the checkout will show a "Payment
 failed" error. The rest of the site works fine with any static server.
 
-## Deploying
+Deploying
 
 The site is deployed to Vercel. Any commit to the main branch of the
 GitHub repo triggers an automatic redeploy. Vercel detects api/pay.js as
@@ -43,7 +43,7 @@ a serverless function and exposes it at /api/pay. No build step is used
 for the static files. After deploying to a new domain, remember to add
 that domain to Firebase Authentication, Settings, Authorized domains.
 
-## Ticket code format
+Ticket code format
 
 Codes are generated in the browser by js/codegen.js. The format is JVS
 followed by two groups of four characters and a three digit checksum,
@@ -54,7 +54,7 @@ easy to read aloud without confusion. The three digit checksum is derived
 from the first eight characters, and verifyTicketCode recomputes it to
 reject forged or mistyped codes without a database lookup.
 
-## Roadmap
+Roadmap
 
 Not yet built, listed roughly in order of priority.
 
