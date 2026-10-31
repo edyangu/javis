@@ -36,7 +36,6 @@ if (!eventId) {
 function updateInstruction() {
   if (!cfg) return;
   const m = document.getElementById("payment-method").value;
-  const number = m === "mtn" ? cfg.mtnNumber : cfg.airtelNumber;
   const label = m === "mtn" ? "MTN Mobile Money" : "Airtel Money";
   const el = document.getElementById("payment-instruction");
   if (el) el.textContent =
@@ -76,16 +75,12 @@ async function callPaymentApi(phone, method) {
   const resp = await fetch("/api/pay", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      phone, amount, method, eventId, type
-    })
+    body: JSON.stringify({ phone, amount, method, eventId, type })
   });
-
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
     throw new Error(err.error || "Payment request failed");
   }
-
   return resp.json();
 }
 
@@ -110,7 +105,6 @@ async function handlePay() {
     return;
   }
 
-  // Switch to waiting view
   view("checkout-view", false);
   view("waiting-view", true);
 
@@ -121,7 +115,6 @@ async function handlePay() {
 
   const status = document.getElementById("waiting-status");
 
-  // Progress bar animation while waiting
   progressBarTo(0);
   let progress = 0;
   const tick = setInterval(() => {
@@ -149,7 +142,6 @@ async function handlePay() {
 
     if (status) status.textContent = "Payment received. Generating your ticket...";
 
-    // Now generate the ticket code and save to Firestore
     const code = generateTicketCode();
     currentTicket = {
       code, type, amount, name, phone, method,
@@ -171,7 +163,6 @@ async function handlePay() {
       console.error("Save failed:", e);
     }
 
-    // Switch to success view
     view("waiting-view", false);
     view("success-view", true);
 
@@ -209,27 +200,113 @@ async function handlePay() {
 function handleDownload() {
   if (!currentTicket) return;
   const t = currentTicket;
-  const lines = [
-    "JAVIS EVENT TICKET",
-    "==================",
-    "Code: " + t.code,
-    "Name: " + t.name,
-    "Phone: " + t.phone,
-    "Type: " + t.type.toUpperCase(),
-    "Amount: " + t.amount + " UGX",
-    "Event: " + t.event,
-    "Location: " + t.location,
-    "Entry Time: " + t.entryTime,
-    "",
-    "Do not share this code. One entry per code."
-  ];
-  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+
+  // Build QR as data URL using qrcodejs already on the page
+  const qrWrapper = document.createElement("div");
+  new QRCode(qrWrapper, {
+    text: t.code,
+    width: 220,
+    height: 220,
+    colorDark: "#111827",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  let qrDataUrl = "";
+  const canvas = qrWrapper.querySelector("canvas");
+  if (canvas) {
+    qrDataUrl = canvas.toDataURL("image/png");
+  } else {
+    const img = qrWrapper.querySelector("img");
+    if (img) qrDataUrl = img.src;
+  }
+
+  const issuedNow = new Date().toLocaleString("en-UG");
+  const amountStr = Number(t.amount).toLocaleString("en-UG");
+
+  const html =
+    '<!DOCTYPE html>\n' +
+    '<html lang="en"><head>' +
+    '<meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<title>Javis Ticket ' + t.code + '</title>' +
+    '<style>' +
+      '* { box-sizing: border-box; }' +
+      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 24px; color: #111827; }' +
+      '.receipt { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }' +
+      '.head { background: #111827; color: #ffffff; padding: 24px 28px; display: flex; justify-content: space-between; align-items: center; }' +
+      '.head .brand { font-size: 18px; font-weight: 800; letter-spacing: 0.15em; display: flex; align-items: center; gap: 8px; }' +
+      '.head .brand::before { content: ""; width: 8px; height: 8px; background: #d4a017; border-radius: 50%; display: inline-block; }' +
+      '.head .type { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; background: #d4a017; color: #111827; padding: 4px 10px; border-radius: 999px; }' +
+      '.body { padding: 28px; }' +
+      '.event { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; line-height: 1.2; }' +
+      '.organiser { font-size: 13px; color: #6b7280; margin-bottom: 24px; }' +
+      '.code-block { background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 24px; }' +
+      '.code-block .label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7280; margin-bottom: 6px; }' +
+      '.code-block .code { font-family: "SF Mono", Consolas, "Courier New", monospace; font-size: 20px; font-weight: 700; letter-spacing: 0.15em; color: #111827; word-break: break-all; }' +
+      '.qr { text-align: center; margin-bottom: 24px; }' +
+      '.qr img { width: 220px; height: 220px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; }' +
+      '.qr .hint { font-size: 12px; color: #6b7280; margin-top: 8px; }' +
+      'table.info { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 24px; }' +
+      'table.info tr td { padding: 10px 0; border-bottom: 1px solid #f3f4f6; }' +
+      'table.info tr td:first-child { color: #6b7280; font-weight: 500; }' +
+      'table.info tr td:last-child { color: #111827; font-weight: 600; text-align: right; }' +
+      '.total { display: flex; justify-content: space-between; align-items: center; background: #111827; color: #ffffff; padding: 18px 20px; border-radius: 8px; margin-bottom: 24px; }' +
+      '.total .label { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #d1d5db; }' +
+      '.total .value { font-size: 24px; font-weight: 800; color: #d4a017; letter-spacing: -0.02em; }' +
+      '.foot { padding: 16px 28px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; text-align: center; line-height: 1.5; }' +
+      '.actions { max-width: 480px; margin: 16px auto 0; text-align: center; }' +
+      '.actions button { background: #111827; color: #fff; border: none; border-radius: 8px; padding: 12px 28px; font-size: 14px; font-weight: 600; cursor: pointer; margin: 0 6px; }' +
+      '.actions button:hover { background: #1f2937; }' +
+      '@media print { body { background: #fff; padding: 0; } .receipt { box-shadow: none; max-width: 100%; } .actions { display: none; } }' +
+    '</style>' +
+    '</head><body>' +
+    '<div class="receipt">' +
+      '<div class="head">' +
+        '<div class="brand">JAVIS</div>' +
+        '<div class="type">' + t.type.toUpperCase() + '</div>' +
+      '</div>' +
+      '<div class="body">' +
+        '<div class="event">' + t.event + '</div>' +
+        '<div class="organiser">' + (t.location || "") + '</div>' +
+        '<div class="code-block">' +
+          '<div class="label">Ticket Code</div>' +
+          '<div class="code">' + t.code + '</div>' +
+        '</div>' +
+        (qrDataUrl
+          ? '<div class="qr"><img src="' + qrDataUrl + '" alt="Ticket QR code"><div class="hint">Scan at the entrance</div></div>'
+          : '') +
+        '<table class="info">' +
+          '<tr><td>Name</td><td>' + t.name + '</td></tr>' +
+          '<tr><td>Phone</td><td>' + t.phone + '</td></tr>' +
+          '<tr><td>Entry Time</td><td>' + t.entryTime + '</td></tr>' +
+          '<tr><td>Payment Method</td><td>' + t.method.toUpperCase() + '</td></tr>' +
+          '<tr><td>Issued</td><td>' + issuedNow + '</td></tr>' +
+        '</table>' +
+        '<div class="total">' +
+          '<div class="label">Total Paid</div>' +
+          '<div class="value">UGX ' + amountStr + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="foot">' +
+        'One entry per code. Do not share. ' +
+        'If your QR does not scan, show the ticket code at the door.' +
+      '</div>' +
+    '</div>' +
+    '<div class="actions">' +
+      '<button onclick="window.print()">Print / Save as PDF</button>' +
+    '</div>' +
+    '</body></html>';
+
+  const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "javis-ticket-" + t.code + ".txt";
-  a.click();
-  URL.revokeObjectURL(url);
+  const w = window.open(url, "_blank");
+  if (!w) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "javis-ticket-" + t.code + ".html";
+    a.click();
+  }
 }
 
 const payBtn = document.getElementById("pay-now-btn");
