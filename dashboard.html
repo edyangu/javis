@@ -6,17 +6,17 @@
   <title>Javis - Admin Dashboard</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body style="background: #f9fafb;">
 
 <header>
-  <h1>JAVIS ADMIN <span id="super-admin-badge" style="display:none; font-size:12px; padding:2px 8px; background:#d4a017; color:#1a1a1a; border-radius:3px; margin-left:8px; letter-spacing:1px;">SUPER</span></h1>
+  <h1>JAVIS ADMIN <span id="super-admin-badge" style="display:none; font-size:12px; padding:2px 8px; background:#d4a017; color:#1a1a1a; border-radius:4px; margin-left:8px; letter-spacing:0.1em; font-weight:700; vertical-align:middle;">SUPER</span></h1>
   <nav>
     <a href="index.html">View Site</a>
     <a href="#" onclick="logout(); return false;">Logout</a>
   </nav>
 </header>
 
-<main>
+<main class="homepage">
 
   <div id="access-denied" class="card" style="display:none;">
     <h2>Access Denied</h2>
@@ -26,120 +26,181 @@
 
   <div id="dashboard-body" style="display:none;">
 
-    <div class="card">
-      <h2>Event Settings</h2>
-
-      <p class="muted">
-        Public event link:<br>
-        <span id="public-link" style="font-family:monospace; word-break:break-all;"></span>
-      </p>
-
-      <p class="muted" id="event-status-line" style="display:none;"></p>
-
-      <label for="cfg-org">Organisation Name</label>
-      <input id="cfg-org" type="text">
-
-      <label for="cfg-event">Event Name</label>
-      <input id="cfg-event" type="text">
-
-      <label for="cfg-location">Location</label>
-      <input id="cfg-location" type="text">
-
-      <label for="cfg-time">Entry Time</label>
-      <input id="cfg-time" type="text" placeholder="e.g. 7:00 PM">
-
-      <div class="row">
-        <div>
-          <label for="cfg-price-ordinary">Ordinary Price (UGX)</label>
-          <input id="cfg-price-ordinary" type="number" min="0" step="500">
+    <!-- DASHBOARD STATS ROW -->
+    <div class="stats-grid" style="margin-bottom: 32px;">
+      <div class="stat-card">
+        <div class="stat-icon bg-teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         </div>
         <div>
-          <label for="cfg-price-vip">VIP Price (UGX)</label>
-          <input id="cfg-price-vip" type="number" min="0" step="500">
+          <p class="stat-label">Tickets Sold</p>
+          <h3 class="stat-value" id="dash-stat-sold">0</h3>
         </div>
       </div>
 
-      <h3 style="margin-top:24px;">Payment Receiving Numbers</h3>
-      <p class="muted">These numbers will be shown to buyers on checkout. Buyers send money here, then enter their details to receive their ticket code.</p>
-
-      <div class="row">
-        <div>
-          <label for="cfg-mtn">MTN Mobile Money Number</label>
-          <input id="cfg-mtn" type="text" placeholder="e.g. 0770123456">
+      <div class="stat-card">
+        <div class="stat-icon bg-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
         </div>
         <div>
-          <label for="cfg-airtel">Airtel Money Number</label>
-          <input id="cfg-airtel" type="text" placeholder="e.g. 0750123456">
+          <p class="stat-label">Total Revenue</p>
+          <h3 class="stat-value" id="dash-stat-revenue">UGX 0</h3>
         </div>
       </div>
 
-      <p id="save-status" class="muted"></p>
-
-      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-        <button onclick="saveSettings()">Save Settings</button>
-        <button id="toggle-active-btn" class="secondary" type="button" onclick="toggleActive()" style="display:none;"></button>
+      <div class="stat-card">
+        <div class="stat-icon bg-purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+        <div>
+          <p class="stat-label">VIP Tickets</p>
+          <h3 class="stat-value" id="dash-stat-vip">0</h3>
+        </div>
       </div>
-      <p class="muted" id="toggle-hint" style="display:none; margin-top:8px;">
-        Hiding an event removes it from the public homepage. Tickets already sold remain valid and you can still see them below. You can unhide the event at any time.
-      </p>
+
+      <div class="stat-card">
+        <div class="stat-icon bg-orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+        </div>
+        <div>
+          <p class="stat-label">Status</p>
+          <h3 class="stat-value" id="dash-stat-status" style="font-size: 20px;">Active</h3>
+        </div>
+      </div>
     </div>
 
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;" id="settings-wrapper">
+      
+      <!-- EVENT SETTINGS -->
+      <div class="card" style="margin-bottom:0;">
+        <h2>Event Settings</h2>
+        
+        <p class="muted" id="event-status-line" style="display:none; margin-bottom:16px;"></p>
+
+        <label for="cfg-org">Organisation Name</label>
+        <input id="cfg-org" type="text">
+
+        <label for="cfg-event">Event Name</label>
+        <input id="cfg-event" type="text">
+
+        <label for="cfg-image">Event Cover Image URL</label>
+        <input id="cfg-image" type="url" placeholder="https://example.com/poster.jpg">
+        <p class="muted" style="margin-top:4px; font-size:12px;">Paste a direct image link. Leave blank for default.</p>
+
+        <div class="row">
+          <div>
+            <label for="cfg-location">Location</label>
+            <input id="cfg-location" type="text">
+          </div>
+          <div>
+            <label for="cfg-time">Entry Time</label>
+            <input id="cfg-time" type="text" placeholder="e.g. 7:00 PM">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="cfg-price-ordinary">Ordinary Price (UGX)</label>
+            <input id="cfg-price-ordinary" type="number" min="0" step="500">
+          </div>
+          <div>
+            <label for="cfg-price-vip">VIP Price (UGX)</label>
+            <input id="cfg-price-vip" type="number" min="0" step="500">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="cfg-mtn">MTN Number</label>
+            <input id="cfg-mtn" type="text" placeholder="e.g. 0770123456">
+          </div>
+          <div>
+            <label for="cfg-airtel">Airtel Number</label>
+            <input id="cfg-airtel" type="text" placeholder="e.g. 0750123456">
+          </div>
+        </div>
+
+        <p id="save-status" class="muted"></p>
+
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:16px;">
+          <button onclick="saveSettings()">Save Settings</button>
+          <button id="toggle-active-btn" class="secondary" type="button" onclick="toggleActive()" style="display:none;"></button>
+        </div>
+      </div>
+
+      <!-- VERIFY TICKET & PUBLIC LINK -->
+      <div class="card" style="margin-bottom:0; display:flex; flex-direction:column;">
+        <h2>Verify Ticket</h2>
+        <p class="muted">Enter a ticket code to verify it at the door.</p>
+        
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <input id="verify-input" type="text" placeholder="JVS-XXXX-XXXX-###" style="flex:1;">
+          <button onclick="verifyCode()">Verify</button>
+        </div>
+        <p id="verify-result" class="muted" style="margin-top:12px; font-weight:600; font-size:16px;"></p>
+
+        <div style="margin-top:auto; padding-top:24px; border-top:1px solid #f3f4f6;">
+          <p class="muted" style="font-size:13px; margin-bottom:8px;">Public event link:</p>
+          <div id="public-link" style="margin:0; font-size:12px; background:#f9fafb; padding:12px; border-radius:8px; border:1px solid #e5e7eb; word-break:break-all; font-family:monospace;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOLD TICKETS -->
     <div class="card">
-      <h2>Sold Tickets</h2>
-      <p class="muted" id="sold-count">0 tickets sold</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Code</th><th>Name</th><th>Phone</th><th>Type</th>
-            <th>Amount</th><th>Method</th><th>Issued</th>
-          </tr>
-        </thead>
-        <tbody id="sold-table-body"></tbody>
-      </table>
-      <p style="margin-top:12px;">
-        <button class="danger" onclick="clearTickets()">Clear All Tickets (demo only)</button>
-      </p>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="margin:0; border:none; padding:0;">Sold Tickets</h2>
+        <button class="danger" onclick="clearTickets()" style="padding:8px 14px; font-size:13px;">Clear All (Demo)</button>
+      </div>
+      
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th><th>Name</th><th>Phone</th><th>Type</th>
+              <th>Amount</th><th>Method</th><th>Issued</th>
+            </tr>
+          </thead>
+          <tbody id="sold-table-body"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="sold-count" style="margin-top:16px;">0 tickets sold</p>
     </div>
 
-    <div class="card">
-      <h2>Verify a Ticket Code</h2>
-      <label for="verify-input">Enter ticket code</label>
-      <input id="verify-input" type="text" placeholder="JVS-XXXX-XXXX-###">
-      <p id="verify-result" class="muted"></p>
-      <button onclick="verifyCode()">Verify</button>
-    </div>
-
+    <!-- SUPER ADMIN PANELS -->
     <div id="super-admin-panel" style="display:none;">
-
       <div class="card" style="border-left:4px solid #d4a017;">
         <h2>Super Admin — All Organisers</h2>
         <p class="muted" id="organisers-count">0 organiser(s)</p>
-        <table>
-          <thead>
-            <tr><th>UID</th><th>Email</th><th>Name</th><th>Joined</th></tr>
-          </thead>
-          <tbody id="organisers-table-body"></tbody>
-        </table>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr><th>UID</th><th>Email</th><th>Name</th><th>Joined</th></tr>
+            </thead>
+            <tbody id="organisers-table-body"></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="card" style="border-left:4px solid #d4a017;">
-        <h2>Super Admin — All Tickets (Platform-Wide)</h2>
+        <h2>Super Admin — All Tickets</h2>
         <p class="muted" id="all-tickets-count">0 tickets total</p>
-        <table>
-          <thead>
-            <tr><th>Code</th><th>Name</th><th>Type</th><th>Amount</th><th>Issued</th></tr>
-          </thead>
-          <tbody id="all-tickets-table-body"></tbody>
-        </table>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr><th>Code</th><th>Name</th><th>Type</th><th>Amount</th><th>Issued</th></tr>
+            </thead>
+            <tbody id="all-tickets-table-body"></tbody>
+          </table>
+        </div>
       </div>
-
     </div>
 
   </div>
 
 </main>
 
-<footer>Javis Ticketing Demo</footer>
+<footer>Javis Ticketing &mdash; Admin Panel</footer>
 
 <script type="module" src="js/dashboard.js"></script>
 <script src="js/consent.js"></script>
