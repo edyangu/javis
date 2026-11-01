@@ -16,9 +16,13 @@ async function loadDashboardData() {
     const snapOrgs = await getDocs(collection(db, "organisers"));
 
     // Update top stats
-    document.getElementById("stat-events").textContent = snapEvents.size;
-    document.getElementById("stat-tickets").textContent = snapTickets.size;
-    document.getElementById("stat-organisers").textContent = snapOrgs.size;
+    const statEvents = document.getElementById("stat-events");
+    const statTickets = document.getElementById("stat-tickets");
+    const statOrgs = document.getElementById("stat-organisers");
+    
+    if (statEvents) statEvents.textContent = snapEvents.size;
+    if (statTickets) statTickets.textContent = snapTickets.size;
+    if (statOrgs) statOrgs.textContent = snapOrgs.size;
 
     // Count tickets per event
     const ticketCounts = {};
@@ -41,7 +45,7 @@ async function loadDashboardData() {
       const e = d.data();
       const sold = ticketCounts[d.id] || 0;
       
-      // Calculate a fake capacity to show the progress bar (e.g. assume 100 capacity for demo)
+      // Calculate a fake capacity to show the progress bar (assume 100 capacity for demo)
       const capacity = 100;
       let percent = Math.min(Math.round((sold / capacity) * 100), 100);
       if (sold === 0) percent = 0;
@@ -52,7 +56,7 @@ async function loadDashboardData() {
       const card = document.createElement("div");
       card.className = "event-card";
 
-      // We use a generic placeholder image since we don't have event images yet
+      // Use the organiser's image if provided, otherwise a placeholder
       const imageUrl = e.imageUrl || `https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=600&h=300`;
 
       card.innerHTML =
@@ -62,8 +66,8 @@ async function loadDashboardData() {
         '</div>' +
         '<div class="event-card-body">' +
           '<h3>' + (e.eventName || 'Event') + '</h3>' +
-          '<p class="event-meta"> ' + (e.entryTime || 'TBA') + '</p>' +
-          '<p class="event-meta"> ' + (e.location || 'TBA') + '</p>' +
+          '<p class="event-meta">📅 ' + (e.entryTime || 'TBA') + '</p>' +
+          '<p class="event-meta">📍 ' + (e.location || 'TBA') + '</p>' +
           
           '<div class="progress-wrap">' +
             '<div class="progress-text"><span>' + sold + ' registered</span><span>' + percent + '%</span></div>' +
