@@ -3,39 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Javis - Concert Tickets</title>
+  <title>Javis - Discover Events</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body style="background: #f9fafb;">
 
 <header>
   <h1>JAVIS</h1>
   <nav>
     <a href="index.html">Home</a>
     <a href="privacy.html">Privacy &amp; Terms</a>
-    <a href="login.html">Organiser Login</a>
+    <a href="login.html" class="btn secondary" style="padding: 6px 16px; margin-left: 12px;">Organiser Login</a>
   </nav>
 </header>
 
-<main>
+<main style="max-width: 1200px; padding-top: 24px;">
 
-  <div class="card">
-    <h2>Upcoming Events</h2>
-    <p class="muted">Choose an event below to buy tickets.</p>
+  <!-- HERO BANNER -->
+  <div class="hero-banner">
+    <div class="hero-content">
+      <h1>Empowering Events & Experiences</h1>
+      <p>Discover the best concerts, parties, and community events happening around you. Secure your tickets in seconds.</p>
+      <a href="#events-section" class="btn" style="background: #0d9488; color: white; margin-top: 16px;">Browse Events</a>
+    </div>
+    <div class="hero-graphic">
+      <div class="hero-circle"></div>
+      <div class="hero-circle-2"></div>
+    </div>
   </div>
 
-  <div id="events-list">
-    <p class="muted">Loading events...</p>
+  <!-- STATS ROW -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon bg-teal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      </div>
+      <div>
+        <p class="stat-label">Live Events</p>
+        <h3 class="stat-value" id="stat-events">0</h3>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon bg-blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </div>
+      <div>
+        <p class="stat-label">Tickets Sold</p>
+        <h3 class="stat-value" id="stat-tickets">0</h3>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon bg-purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      </div>
+      <div>
+        <p class="stat-label">Organisers</p>
+        <h3 class="stat-value" id="stat-organisers">0</h3>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon bg-orange">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+      </div>
+      <div>
+        <p class="stat-label">Location</p>
+        <h3 class="stat-value" style="font-size: 20px;">Uganda</h3>
+      </div>
+    </div>
   </div>
 
-  <p class="muted">
-    By purchasing a ticket you agree to our
-    <a href="privacy.html">Privacy Policy and Terms of Service</a>.
+  <!-- EVENTS SECTION -->
+  <div id="events-section" style="margin-top: 40px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="font-size: 24px; margin: 0;">Upcoming Events</h2>
+    </div>
+    
+    <div id="events-list" class="events-grid">
+      <p class="muted">Loading events...</p>
+    </div>
+  </div>
+
+  <p class="muted" style="margin-top: 40px; text-align: center;">
+    By purchasing a ticket you agree to our <a href="privacy.html">Privacy Policy and Terms of Service</a>.
   </p>
 
 </main>
 
-<footer>Javis Ticketing Demo &mdash; all prices in UGX</footer>
+<footer>Javis Ticketing &mdash; all prices in UGX</footer>
 
 <script type="module" src="js/tickets.js"></script>
 <script src="js/consent.js"></script>
