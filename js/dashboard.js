@@ -28,7 +28,9 @@ onAuthStateChanged(auth, async (user) => {
 
   document.getElementById("access-denied").style.display = "none";
   document.getElementById("dashboard-body").style.display = "block";
-  document.getElementById("public-link").textContent = window.location.origin + "/index.html";
+  
+  const pl = document.getElementById("public-link");
+  if (pl) pl.textContent = window.location.origin + "/index.html?org=" + user.uid;
 
   if (isSuperAdmin) {
     document.getElementById("super-admin-panel").style.display = "block";
@@ -52,6 +54,7 @@ async function loadConfigIntoForm() {
 
     document.getElementById("cfg-org").value        = c.orgName || "";
     document.getElementById("cfg-event").value      = c.eventName || "";
+    document.getElementById("cfg-image").value      = c.imageUrl || ""; 
     document.getElementById("cfg-location").value   = c.location || "";
     document.getElementById("cfg-time").value       = c.entryTime || "";
     document.getElementById("cfg-price-ordinary").value = c.prices?.ordinary ?? 50000;
@@ -67,12 +70,11 @@ async function loadConfigIntoForm() {
 
 function updateActiveUI() {
   const btn = document.getElementById("toggle-active-btn");
-  const hint = document.getElementById("toggle-hint");
   const statusLine = document.getElementById("event-status-line");
+  const statStatus = document.getElementById("dash-stat-status");
 
   if (!btn) return;
   btn.style.display = "inline-flex";
-  if (hint) hint.style.display = "block";
 
   if (myEventActive) {
     btn.textContent = "Hide Event";
@@ -80,7 +82,11 @@ function updateActiveUI() {
     btn.classList.add("secondary");
     if (statusLine) {
       statusLine.style.display = "block";
-      statusLine.innerHTML = "Status: <strong style='color:#15803d;'>Visible</strong> — your event is on the public homepage.";
+      statusLine.innerHTML = "Status: <strong style='color:#15803d;'>Visible</strong> on homepage.";
+    }
+    if (statStatus) {
+      statStatus.textContent = "Active";
+      statStatus.style.color = "#15803d";
     }
   } else {
     btn.textContent = "Show Event";
@@ -88,7 +94,11 @@ function updateActiveUI() {
     btn.classList.add("danger");
     if (statusLine) {
       statusLine.style.display = "block";
-      statusLine.innerHTML = "Status: <strong style='color:#b91c1c;'>Hidden</strong> — your event is not on the public homepage.";
+      statusLine.innerHTML = "Status: <strong style='color:#b91c1c;'>Hidden</strong> from homepage.";
+    }
+    if (statStatus) {
+      statStatus.textContent = "Hidden";
+      statStatus.style.color = "#b91c1c";
     }
   }
 }
@@ -114,6 +124,7 @@ window.saveSettings = async function () {
     organiserUid: myEventId,
     orgName:    document.getElementById("cfg-org").value.trim() || "Javis Events",
     eventName:  document.getElementById("cfg-event").value.trim() || "Concert",
+    imageUrl:   document.getElementById("cfg-image").value.trim(),
     location:   document.getElementById("cfg-location").value.trim() || "Kampala",
     entryTime:  document.getElementById("cfg-time").value.trim() || "7:00 PM",
     currency:   "UGX",
@@ -139,20 +150,40 @@ async function renderTickets() {
   const tbody = document.getElementById("sold-table-body");
   if (!tbody) return;
   tbody.innerHTML = "";
+  
   try {
-    const q = query(
-      collection(db, "tickets"),
-      where("eventId", "==", myEventId)
-    );
+    const q = query(collection(db, "tickets"), where("eventId", "==", myEventId));
     const snap = await getDocs(q);
-    document.getElementById("sold-count").textContent = snap.size + " ticket(s) sold";
+    
+    // CALCULATE STATS
+    let totalRevenue = 0;
+    let vipCount = 0;
+    
     const rows = [];
-    snap.forEach(d => rows.push(d.data()));
+    snap.forEach(d => {
+      const t = d.data();
+      rows.push(t);
+      totalRevenue += (t.amount || 0);
+      if (t.type === 'vip') vipCount++;
+    });
+
+    // Update top stats UI
+    const statSold = document.getElementById("dash-stat-sold");
+    const statRev = document.getElementById("dash-stat-revenue");
+    const statVip = document.getElementById("dash-stat-vip");
+    
+    if (statSold) statSold.textContent = snap.size;
+    if (statRev) statRev.textContent = "UGX " + totalRevenue.toLocaleString();
+    if (statVip) statVip.textContent = vipCount;
+
+    // Sort and render table
+    document.getElementById("sold-count").textContent = snap.size + " ticket(s) sold";
     rows.sort((a, b) => {
       const ta = a.issuedAt?.toMillis?.() || 0;
       const tb = b.issuedAt?.toMillis?.() || 0;
       return tb - ta;
     });
+    
     rows.forEach(t => {
       const tr = document.createElement("tr");
       const issued = t.issuedAt && t.issuedAt.toMillis
@@ -185,18 +216,23 @@ window.verifyCode = async function () {
   const code = document.getElementById("verify-input").value.trim().toUpperCase();
   const result = document.getElementById("verify-result");
   result.textContent = "";
-  if (!verifyTicketCode(code)) { result.textContent = "INVALID format or checksum."; return; }
+  if (!verifyTicketCode(code)) { result.textContent = "INVALID format or checksum."; result.style.color = "#b91c1c"; return; }
   try {
     const q = query(collection(db, "tickets"), where("code", "==", code));
     const snap = await getDocs(q);
-    if (snap.empty) { result.textContent = "Well-formed but not found."; return; }
+    if (snap.empty) { result.textContent = "Well-formed but not found."; result.style.color = "#b91c1c"; return; }
     const t = snap.docs[0].data();
     if (t.eventId !== myEventId && !isSuperAdmin) {
       result.textContent = "This ticket belongs to another organiser's event.";
+      result.style.color = "#b91c1c";
       return;
     }
-    result.textContent = "VALID - " + t.type.toUpperCase() + " for " + t.name + " (" + t.phone + ")";
-  } catch (e) { result.textContent = "Verify failed: " + e.message; }
+    result.textContent = "VALID - " + t.type.toUpperCase() + " for " + t.name;
+    result.style.color = "#15803d";
+  } catch (e) { 
+    result.textContent = "Verify failed: " + e.message; 
+    result.style.color = "#b91c1c";
+  }
 };
 
 async function loadOrganisers() {
